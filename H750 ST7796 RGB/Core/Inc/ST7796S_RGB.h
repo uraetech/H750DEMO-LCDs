@@ -58,6 +58,7 @@ void BSP_LCD_FillTriangle(uint16_t X1, uint16_t X2, uint16_t X3, uint16_t Y1, ui
 void BSP_LCD_FillPolygon(pPoint Points, uint16_t PointCount, uint16_t Color);
 void BSP_LCD_FillEllipse(int Xpos, int Ypos, int XRadius, int YRadius, uint16_t Color);
 void BSP_LCD_Direction(uint8_t dir);
+uint8_t BSP_LCD_GetDirection(void);
 void BSP_LCD_SetBackLight(uint16_t brightness);	// 0 <= brightness < 100
 
 #endif /* INC_ST7796S_RGB_H_ */

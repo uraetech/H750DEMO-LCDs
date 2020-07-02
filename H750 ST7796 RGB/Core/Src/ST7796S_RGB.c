@@ -24,6 +24,7 @@ volatile uint16_t LCD_WIDTH	 = 320;
 
 
 static uint32_t ActiveLayer = 0;
+static uint8_t Direction;
 
 
 /*Send data (char) to LCD*/
@@ -78,16 +79,16 @@ void ST7796_Init_RGB(void)
   ST7796_Write_Data(0x55);			//¡®101¡¯ = 16bit/pixel
 
   ST7796_Write_Command(0xB0);		//Interface Mode Control
-  ST7796_Write_Data(0x80);			//SPI_EN = 1, 3/4 wire serial interface
+  ST7796_Write_Data(0x12);			//SPI_EN = 1, 3/4 wire serial interface
 
   ST7796_Write_Command(0xB5);
   ST7796_Write_Data(8);					//VFP: Front porch of vertical lines =4
   ST7796_Write_Data(4);					//VBP: Back porch of vertical lines =2
-  ST7796_Write_Data(0);
-  ST7796_Write_Data(20);				//HBP: Back porch of horizontal dotclk=10
+  ST7796_Write_Data(10);
+  ST7796_Write_Data(10);				//HBP: Back porch of horizontal dotclk=10
 
   ST7796_Write_Command(0xB6);		//Display Function Control
-  ST7796_Write_Data(0x20);	// A0		//D5=1:RGB,D5=0:System Interface D6=1:SYNC Mode   E0
+  ST7796_Write_Data(0x20);	// A0		//D5=1:RGB,D5=0:System Interface D6=1:SYNC Mode   E0  20
   ST7796_Write_Data(0x02);	// 02
   ST7796_Write_Data(0x3B);
 
@@ -156,9 +157,11 @@ void ST7796_Init_RGB(void)
 
 void BSP_LCD_Direction(uint8_t dir)
 {
+	Direction = dir;
+
   ST7796_Write_Command(0x36);		//Memory Data Access Control
 
-  switch(dir)
+  switch(Direction)
 	{
 		case 0:
 			LCD_WIDTH = 320;
@@ -215,7 +218,6 @@ void BSP_LCD_Direction(uint8_t dir)
 			LCD_WIDTH = 480;
 			LCD_HEIGHT = 320;
 		  ST7796_Write_Data((1<<5)|(1<<3));//270 degree MY=0, MX=0, MV=1, ML=0, BGR=1, MH=0
-
 		  ST7796_Write_Command(0x2A);
 			ST7796_Write_Data(0x00);
 			ST7796_Write_Data(0x00);
@@ -228,6 +230,11 @@ void BSP_LCD_Direction(uint8_t dir)
 			ST7796_Write_Data(0x3F);
 			break;
 	}
+}
+
+uint8_t BSP_LCD_GetDirection(void)
+{
+	return Direction;
 }
 
 
@@ -289,9 +296,14 @@ __inline uint16_t BSP_LCD_GetYSize(void)
   */
 void BSP_LCD_DrawPixel(uint16_t Xpos, uint16_t Ypos, uint32_t RGB_Code)
 {
+	uint16_t Width = BSP_LCD_GetXSize();
+	uint16_t Height = BSP_LCD_GetYSize();
+
+	if((Xpos >= Width) || (Ypos >= Height)) return;
+
   /* Write data value to all SDRAM memory */
   //*(__IO uint32_t*) (LtdcHandler.LayerCfg[ActiveLayer].FBStartAdress + (4*(Ypos*BSP_LCD_GetXSize() + Xpos))) = RGB_Code;		// 32bit color
-	*(__IO uint16_t*) (LtdcHandler.LayerCfg[ActiveLayer].FBStartAdress + (2*(Ypos*BSP_LCD_GetXSize() + Xpos))) = RGB_Code;			// 16bit color
+	*(__IO uint16_t*) (LtdcHandler.LayerCfg[ActiveLayer].FBStartAdress + (2*(Ypos*Width + Xpos))) = RGB_Code;			// 16bit color
 }
 
 /**
@@ -367,6 +379,8 @@ void BSP_LCD_DrawHLine(uint16_t Xpos, uint16_t Ypos, uint16_t Length, uint16_t C
 {
   uint32_t xaddress = 0;
 
+  if(Length == 0) return;
+
   /* Get the line address */
   xaddress = (LtdcHandler.LayerCfg[ActiveLayer].FBStartAdress) + 2 * (BSP_LCD_GetXSize()*Ypos + Xpos);
 
@@ -383,6 +397,8 @@ void BSP_LCD_DrawHLine(uint16_t Xpos, uint16_t Ypos, uint16_t Length, uint16_t C
 void BSP_LCD_DrawVLine(uint16_t Xpos, uint16_t Ypos, uint16_t Length, uint16_t Color)
 {
   uint32_t xaddress = 0;
+
+  if(Length == 0) return;
 
   /* Get the line address */
   xaddress = (LtdcHandler.LayerCfg[ActiveLayer].FBStartAdress) + 2 * (BSP_LCD_GetXSize()*Ypos + Xpos);
@@ -474,6 +490,8 @@ void BSP_LCD_DrawLine(uint16_t X1, uint16_t Y1, uint16_t X2, uint16_t Y2, uint16
   */
 void BSP_LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Height, uint16_t Color)
 {
+  if((Width == 0) || (Height == 0)) return;
+
   /* Draw horizontal lines */
   BSP_LCD_DrawHLine(Xpos, Ypos, Width,Color);
   BSP_LCD_DrawHLine(Xpos, (Ypos+ Height), Width, Color);
@@ -489,11 +507,14 @@ void BSP_LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Hei
   * @param  Ypos: the Y position
   * @param  Radius: the circle radius
   */
+#if 0
 void BSP_LCD_DrawCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius, uint16_t Color)
 {
   int32_t  d;/* Decision Variable */
   uint32_t  curx;/* Current X Value */
   uint32_t  cury;/* Current Y Value */
+
+	if(Radius == 0) return;
 
   d = 3 - (Radius << 1);
   curx = 0;
@@ -522,6 +543,42 @@ void BSP_LCD_DrawCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius, uint16_t 
     curx++;
   }
 }
+#else
+void BSP_LCD_DrawCircle(uint16_t x, uint16_t y, uint16_t radian, uint16_t color)
+{
+  int a, b;
+  int di;
+
+  a = 0;
+  b = radian;
+  di = 3 - (radian << 1);
+
+  while(a <= b)
+  {
+  	BSP_LCD_DrawPixel(x-b,y-a,color); //3
+  	BSP_LCD_DrawPixel(x+b,y-a,color); //0
+  	BSP_LCD_DrawPixel(x-a,y+b,color); //1
+  	BSP_LCD_DrawPixel(x-b,y-a,color); //7
+  	BSP_LCD_DrawPixel(x-a,y-b,color); //2
+  	BSP_LCD_DrawPixel(x+b,y+a,color); //4
+  	BSP_LCD_DrawPixel(x+a,y-b,color); //5
+  	BSP_LCD_DrawPixel(x+a,y+b,color); //6
+  	BSP_LCD_DrawPixel(x-b,y+a,color);
+    a++;
+    //Bresenham
+    if(di<0)
+    {
+      di +=4*a+6;
+    }
+    else
+    {
+      di+=10+4*(a-b);
+      b--;
+    }
+    BSP_LCD_DrawPixel(x+a,y+b,color);
+  }
+}
+#endif
 
 /**
   * @brief  Displays an poly-line (between many points).
@@ -590,13 +647,20 @@ void BSP_LCD_DrawEllipse(int Xpos, int Ypos, int XRadius, int YRadius, uint16_t 
   */
 void BSP_LCD_FillRect(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Height, uint16_t Color)
 {
+	uint16_t W = BSP_LCD_GetXSize();
+	uint16_t H = BSP_LCD_GetYSize();
   uint32_t xaddress = 0;
 
+  if((Width == 0) || (Height == 0)) return;
+
+  if(Xpos + Width >= W) Width = W - Xpos;
+  if(Ypos + Height >= H) Height = H - Ypos;
+
   /* Get the rectangle start address */
-  xaddress = (LtdcHandler.LayerCfg[ActiveLayer].FBStartAdress) + 2 * (BSP_LCD_GetXSize() * Ypos + Xpos);
+  xaddress = (LtdcHandler.LayerCfg[ActiveLayer].FBStartAdress) + 2 * (W * Ypos + Xpos);
 
   /* Fill the rectangle */
-  FillBuffer(ActiveLayer, (uint32_t *)xaddress, Width, Height, (BSP_LCD_GetXSize() - Width), Color);
+  FillBuffer(ActiveLayer, (uint32_t *)xaddress, Width, Height, (W - Width), Color);
 }
 
 /**
