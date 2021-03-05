@@ -381,7 +381,7 @@ void ILI9488_Draw_Colour_Burst(uint16_t Colour, uint32_t Size)
 /*Sets address (entire screen) and Sends Height*Width ammount of colour information to LCD*/
 void ILI9488_Fill_Screen(uint16_t Colour)
 {
-	ILI9488_Set_Address(0,0,LCD_WIDTH,LCD_HEIGHT);
+	ILI9488_Set_Address(0,0,LCD_WIDTH-1,LCD_HEIGHT-1);
 	ILI9488_Draw_Colour_Burst(Colour, LCD_WIDTH * LCD_HEIGHT);
 }
 

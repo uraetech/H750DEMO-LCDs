@@ -274,7 +274,7 @@ void ST7796_Draw_Colour_Burst(uint16_t Colour, uint32_t Size)
 /*Sets address (entire screen) and Sends Height*Width ammount of colour information to LCD*/
 void ST7796_Fill_Screen(uint16_t Colour)
 {
-	ST7796_Set_Address(0,0,LCD_WIDTH,LCD_HEIGHT);
+	ST7796_Set_Address(0,0,LCD_WIDTH-1,LCD_HEIGHT-1);
 	ST7796_Draw_Colour_Burst(Colour, LCD_WIDTH*LCD_HEIGHT);
 }
 
